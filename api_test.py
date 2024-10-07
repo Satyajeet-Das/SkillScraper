@@ -144,6 +144,7 @@ def fetchJobDecription(job_description_url):
     skills_required = extract_skills(job_apply_description)
     
     d = {
+        "link": job_description_url,
         "skills required": skills_required,
         "seniority level": job_criteria.select_one("li:nth-child(1) > span").get_text(strip=True) if job_criteria.select_one("li:nth-child(1) > span") else "NA",
         "employment type": job_criteria.select_one("li:nth-child(2) > span").get_text(strip=True) if job_criteria.select_one("li:nth-child(2) > span") else "NA",

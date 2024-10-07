@@ -1,8 +1,8 @@
 import sys
+import webbrowser
 import requests
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import (QApplication, QWidget, QLabel, QLineEdit, QDialog,
-                             QPushButton, QVBoxLayout, QListWidget, QMessageBox, QScrollBar)
+from PyQt5.QtWidgets import (QApplication, QWidget, QLabel, QLineEdit, QDialog, QPushButton, QVBoxLayout, QListWidget, QMessageBox, QScrollBar)
 
 class ApiForm(QWidget):
     def __init__(self):
@@ -98,7 +98,6 @@ class ApiForm(QWidget):
         
         role = self.role_field.text()
         location = self.location_field.text()
-        print(f'{page}')
 
         if not role or not location:
             QMessageBox.warning(self, "Input Error", "Please enter both role and location")
@@ -127,7 +126,8 @@ class ApiForm(QWidget):
         for item in results:
             job_title = item.get('title', 'Unknown Job')
             job_company = item.get('company', 'Unknown Company')
-            self.result_list.addItem(f'{job_title} By {job_company}')  # Add each job title to the list
+            job_location = item.get('location', 'Unknown Company')
+            self.result_list.addItem(f'{job_title} By {job_company} At Location {job_location}')  # Add each job title to the list
 
     def checkScrollPosition(self):
         # Check if the scroll bar has reached the bottom
@@ -163,6 +163,7 @@ class ApiForm(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to get job details: {str(e)}")
 
+
     def displayJobDetails(self, job_details):
         details_dialog = QDialog(self)
         details_dialog.setWindowTitle("Job Details")
@@ -173,6 +174,7 @@ class ApiForm(QWidget):
         employment_type = job_details.get('employment type', 'N/A')
         job_function = job_details.get('job function', 'N/A')
         industries = job_details.get('industries', 'N/A')
+        job_link = job_details.get('link')  # Get the job link for the "Apply" button
 
         details_layout.addWidget(QLabel(f"Skills Required: {', '.join(skills)}"))
         details_layout.addWidget(QLabel(f"Seniority Level: {seniority}"))
@@ -180,12 +182,31 @@ class ApiForm(QWidget):
         details_layout.addWidget(QLabel(f"Job Function: {job_function}"))
         details_layout.addWidget(QLabel(f"Industries: {industries}"))
 
+        # Add "Apply" and "Close" buttons
+        button_layout = QVBoxLayout()
+        apply_button = QPushButton("Apply")
         close_button = QPushButton("Close")
+
+        # Connect "Apply" button to open the job link in a browser
+        apply_button.clicked.connect(lambda: self.openJobLink(job_link))
+
         close_button.clicked.connect(details_dialog.close)
-        details_layout.addWidget(close_button)
+
+        button_layout.addWidget(apply_button)
+        button_layout.addWidget(close_button)
+        
+        details_layout.addLayout(button_layout)
 
         details_dialog.setLayout(details_layout)
         details_dialog.exec_()
+
+    # Function to open the job link in the default web browser
+    def openJobLink(self, job_link):
+        if job_link:
+            webbrowser.open(job_link)
+        else:
+            QMessageBox.warning(self, "Error", "No job link available")
+
 
 # Main Function to Run the Application
 if __name__ == '__main__':
