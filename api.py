@@ -130,7 +130,7 @@ def extract_skills(text):
 
 def fetchJobDecription(job_description_url):
     try:
-        desc_response
+        desc_response = ""
         with concurrent.futures.ThreadPoolExecutor() as executor:
             future = executor.submit(requests.get, job_description_url)
             desc_response = future.result()

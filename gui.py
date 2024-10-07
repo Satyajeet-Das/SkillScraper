@@ -2,7 +2,7 @@ import sys
 import webbrowser
 import requests
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import (QApplication, QWidget, QLabel, QLineEdit, QDialog, QPushButton, QVBoxLayout, QListWidget, QMessageBox, QScrollBar)
+from PyQt5.QtWidgets import (QApplication, QWidget, QLabel, QLineEdit, QDialog, QPushButton, QVBoxLayout, QListWidget, QMessageBox, QScrollBar, QHBoxLayout)
 
 class ApiForm(QWidget):
     def __init__(self):
@@ -10,9 +10,20 @@ class ApiForm(QWidget):
         self.initUI()
         self.jobs = []  # Store job details and links
         self.current_page = 1  # Track pagination
+        self.isDarkMode = False
 
     def initUI(self):
         layout = QVBoxLayout()
+
+        # Theme Toggle Button
+        self.theme_toggle_button = QPushButton('Toggle Theme', self)
+        self.theme_toggle_button.setFixedSize(120, 40)
+        self.theme_toggle_button.clicked.connect(self.toggleTheme)
+
+        # Horizontal layout for the theme toggle button (optional)
+        header_layout = QHBoxLayout()
+        header_layout.addWidget(self.theme_toggle_button)
+        header_layout.addStretch()
 
         # Role
         self.role_label = QLabel('Enter Role:')
@@ -32,6 +43,7 @@ class ApiForm(QWidget):
         self.result_list.verticalScrollBar().valueChanged.connect(self.checkScrollPosition)
 
         # Add widgets to layout
+        layout.addLayout(header_layout)  # Add the header layout with theme toggle button
         layout.addWidget(self.role_label)
         layout.addWidget(self.role_field)
         layout.addWidget(self.location_label)
@@ -43,10 +55,10 @@ class ApiForm(QWidget):
         self.setLayout(layout)
         self.setWindowTitle('API Caller')
 
-        # Apply stylesheet
-        self.applyStyles()
+        # Apply initial light mode stylesheet
+        self.setLightMode()
 
-    def applyStyles(self):
+    def setLightMode(self):
         self.setStyleSheet("""
             QWidget {
                 background-color: #f4f4f4;
@@ -92,6 +104,64 @@ class ApiForm(QWidget):
             }
         """)
 
+    def setDarkMode(self):
+        self.setStyleSheet("""
+            QWidget {
+                background-color: #1e1e1e;
+                font-family: Arial, sans-serif;
+            }
+            QLabel {
+                font-size: 14px;
+                color: #f4f4f4;
+                margin-bottom: 5px;
+            }
+            QLineEdit {
+                padding: 8px;
+                font-size: 14px;
+                border: 2px solid #555;
+                border-radius: 5px;
+                background-color: #333;
+                color: #fff;
+                margin-bottom: 10px;
+            }
+            QPushButton {
+                background-color: #3a7afe;
+                color: white;
+                padding: 10px;
+                font-size: 14px;
+                border: none;
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background-color: #295bc7;
+            }
+            QListWidget {
+                padding: 10px;
+                border: 2px solid #555;
+                border-radius: 5px;
+                font-size: 14px;
+                background-color: #2c2c2c;
+                color: #fff;
+                margin-top: 10px;
+            }
+            QListWidget::item {
+                padding: 8px;
+            }
+            QListWidget::item:selected {
+                background-color: #3a7afe;
+                color: white;
+            }
+        """)
+
+    # Toggle theme between light and dark
+    def toggleTheme(self):
+        if not self.isDarkMode:
+            self.isDarkMode = True
+            self.setDarkMode()
+        else:
+            self.isDarkMode = False
+            self.setLightMode()
+
     def callApi(self, page=None):
         if page is None:
             page = self.current_page
@@ -105,8 +175,7 @@ class ApiForm(QWidget):
 
         # Call the API with pagination
         try:
-            # response = requests.get(f'http://127.0.0.1:8000/api/jobs?role={role}&location={location}&page={page}')
-            response = requests.get(f'http://127.0.0.1:8000/api/jobs?role={role}&location={location}&page=1')
+            response = requests.get(f'http://127.0.0.1:8000/api/jobs?role={role}&location={location}&page={page}')
             if response.status_code == 200:
                 data = response.json()  # Assume the API returns a JSON response
                 new_jobs = data if isinstance(data, list) else data.get('result', [])
@@ -126,7 +195,7 @@ class ApiForm(QWidget):
         for item in results:
             job_title = item.get('title', 'Unknown Job')
             job_company = item.get('company', 'Unknown Company')
-            job_location = item.get('location', 'Unknown Company')
+            job_location = item.get('location', 'Unknown Location')
             self.result_list.addItem(f'{job_title} By {job_company} At Location {job_location}')  # Add each job title to the list
 
     def checkScrollPosition(self):
@@ -153,7 +222,6 @@ class ApiForm(QWidget):
 
     def openDetails(self, link):
         try:
-            # Call the API to get the job description details
             response = requests.get(f'http://127.0.0.1:8000/api/jobs/description?url={link}')
             if response.status_code == 200:
                 job_details = response.json()  # Parse the JSON response
@@ -162,7 +230,6 @@ class ApiForm(QWidget):
                 QMessageBox.warning(self, "API Error", f"Error: {response.status_code}")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to get job details: {str(e)}")
-
 
     def displayJobDetails(self, job_details):
         details_dialog = QDialog(self)
@@ -174,7 +241,7 @@ class ApiForm(QWidget):
         employment_type = job_details.get('employment type', 'N/A')
         job_function = job_details.get('job function', 'N/A')
         industries = job_details.get('industries', 'N/A')
-        job_link = job_details.get('link')  # Get the job link for the "Apply" button
+        job_link = job_details.get('link')
 
         details_layout.addWidget(QLabel(f"Skills Required: {', '.join(skills)}"))
         details_layout.addWidget(QLabel(f"Seniority Level: {seniority}"))
@@ -182,35 +249,21 @@ class ApiForm(QWidget):
         details_layout.addWidget(QLabel(f"Job Function: {job_function}"))
         details_layout.addWidget(QLabel(f"Industries: {industries}"))
 
-        # Add "Apply" and "Close" buttons
-        button_layout = QVBoxLayout()
+        button_layout = QHBoxLayout()
         apply_button = QPushButton("Apply")
-        close_button = QPushButton("Close")
-
-        # Connect "Apply" button to open the job link in a browser
-        apply_button.clicked.connect(lambda: self.openJobLink(job_link))
-
-        close_button.clicked.connect(details_dialog.close)
-
+        apply_button.clicked.connect(lambda: webbrowser.open(job_link))
         button_layout.addWidget(apply_button)
+
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(details_dialog.accept)
         button_layout.addWidget(close_button)
-        
+
         details_layout.addLayout(button_layout)
 
-        details_dialog.setLayout(details_layout)
         details_dialog.exec_()
 
-    # Function to open the job link in the default web browser
-    def openJobLink(self, job_link):
-        if job_link:
-            webbrowser.open(job_link)
-        else:
-            QMessageBox.warning(self, "Error", "No job link available")
-
-
-# Main Function to Run the Application
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    form = ApiForm()
-    form.show()
+    api_form = ApiForm()
+    api_form.show()
     sys.exit(app.exec_())
