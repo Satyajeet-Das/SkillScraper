@@ -9,7 +9,7 @@ class ApiForm(QWidget):
         super().__init__()
         self.initUI()
         self.jobs = []  # Store job details and links
-        self.current_page = 1  # Track pagination
+        self.current_page = 0  # Track pagination
         self.isDarkMode = False
 
     def initUI(self):
@@ -162,10 +162,7 @@ class ApiForm(QWidget):
             self.isDarkMode = False
             self.setLightMode()
 
-    def callApi(self, page=None):
-        if page is None:
-            page = self.current_page
-        
+    def callApi(self): 
         role = self.role_field.text()
         location = self.location_field.text()
 
@@ -175,14 +172,14 @@ class ApiForm(QWidget):
 
         # Call the API with pagination
         try:
-            response = requests.get(f'http://127.0.0.1:8000/api/jobs?role={role}&location={location}&page={page}')
+            response = requests.get(f'http://127.0.0.1:8000/api/jobs?role={role}&location={location}&page={self.current_page+1}')
             if response.status_code == 200:
                 data = response.json()  # Assume the API returns a JSON response
                 new_jobs = data if isinstance(data, list) else data.get('result', [])
                 if new_jobs:
                     self.jobs.extend(new_jobs)  # Append new job data
                     self.displayResults(new_jobs)
-                    self.current_page = page
+                    self.current_page+=1
                 else:
                     QMessageBox.information(self, "No More Results", "No more jobs found.")
             else:
@@ -206,7 +203,7 @@ class ApiForm(QWidget):
 
     def loadMoreData(self):
         # Load next page of results
-        self.callApi(page=self.current_page + 1)
+        self.callApi()
 
     def handleItemClick(self, item):
         selected_job = item.text()  # Get the clicked item text (job title)
